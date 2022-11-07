@@ -15,7 +15,7 @@ import (
 
 var ErrNoContentChange = errors.New("no content changed")
 
-//go:embed README.md.tmpl
+//go:embed templates/README.md.tmpl
 var readmeTemplate string
 
 func main() {
