@@ -6,11 +6,11 @@
 
 ## Decisions
 
-| #                    | Title                                                                       | Status   |
-|----------------------|-----------------------------------------------------------------------------|----------|
+| #                | Title                                                                       | Status   |
+|------------------|-----------------------------------------------------------------------------|----------|
 {{ range $element := .Decisions -}}
 {{ if $element.IsActive -}}
-| [{{ $element.ID }}][{{ $element.ID }}] | {{ $element.Title }} | {{ $element.Status }} |
+| [{{ $element.ShortID }}][{{ $element.ID }}] | {{ $element.Title }} | {{ $element.Status }} |
 {{ else -}}
 | ~~[{{ $element.ID }}][{{ $element.ID }}]~~ | ~~{{ $element.Title }}~~ | ~~{{ $element.Status }}~~ |
 {{ end -}}

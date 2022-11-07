@@ -29,9 +29,17 @@ func (d Decision) Filename() string {
 	return filepath.Base(d.Path)
 }
 
+func (d Decision) ShortID() string {
+	parts := strings.Split(d.Filename(), "-")
+	if len(parts) < 2 {
+		return "0000"
+	}
+	return parts[0]
+}
+
 func (d Decision) ID() string {
 	parts := strings.Split(d.Filename(), "-")
-	if len(parts) == 0 {
+	if len(parts) < 2 {
 		return "ADR-0000"
 	}
 	return fmt.Sprintf("ADR-%s", parts[0])
