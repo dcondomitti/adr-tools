@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/bmorton/adr-tools/schema"
 	"github.com/google/go-github/v48/github"
+	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
@@ -128,17 +129,19 @@ func (r Builder) loadDecisions(ctx context.Context) (map[string]*schema.Decision
 		}
 
 		for _, decisionRef := range dir {
-			content, err := r.getContent(ctx, branch, decisionRef.GetPath())
-			if err != nil {
-				return decisions, err
-			}
-			decision := &schema.Decision{
-				RawContent: content,
-				Path:       decisionRef.GetPath(),
-				GithubURL:  decisionRef.GetHTMLURL(),
-			}
-			if _, ok := decisions[decision.Filename()]; !ok {
-				decisions[decision.Filename()] = decision
+			if filepath.Ext(decisionRef.GetPath()) == ".md" {
+				content, err := r.getContent(ctx, branch, decisionRef.GetPath())
+				if err != nil {
+					return decisions, err
+				}
+				decision := &schema.Decision{
+					RawContent: content,
+					Path:       decisionRef.GetPath(),
+					GithubURL:  decisionRef.GetHTMLURL(),
+				}
+				if _, ok := decisions[decision.Filename()]; !ok {
+					decisions[decision.Filename()] = decision
+				}
 			}
 		}
 	}
