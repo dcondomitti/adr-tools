@@ -61,7 +61,7 @@ func (r ReadmeRebuilder) BuildWithPullRequest(ctx context.Context) error {
 	}
 
 	fmt.Printf("-- Building README.md...\n")
-	newContent, err := r.generateReadme(ctx, decisions)
+	newContent, err := r.regenerateReadme(ctx, decisions)
 	if err != nil {
 		return err
 	}
@@ -160,6 +160,8 @@ func (r ReadmeRebuilder) createPullRequest(ctx context.Context) (*github.PullReq
 }
 
 func (r ReadmeRebuilder) commitToBranch(ctx context.Context, content string, message string, baseRef string) (*github.Reference, error) {
+	ref, err := r.getRef(ctx, baseRef)
+
 	blob := &github.Blob{
 		Content: &content,
 	}
@@ -176,13 +178,13 @@ func (r ReadmeRebuilder) commitToBranch(ctx context.Context, content string, mes
 			SHA:  createBlob.SHA,
 		},
 	}
-	tree, _, err := r.gh.Git.CreateTree(ctx, r.Owner, r.Repo, baseRef, newTree)
+	tree, _, err := r.gh.Git.CreateTree(ctx, r.Owner, r.Repo, ref.GetObject().GetSHA(), newTree)
 	if err != nil {
 		return nil, err
 	}
 
 	newParentCommit := &github.Commit{
-		SHA: &baseRef,
+		SHA: ref.GetObject().SHA,
 	}
 
 	newCommit := &github.Commit{
@@ -202,11 +204,11 @@ func (r ReadmeRebuilder) commitToBranch(ctx context.Context, content string, mes
 			SHA: commit.SHA,
 		},
 	}
-	ref, _, err := r.gh.Git.CreateRef(ctx, r.Owner, r.Repo, newBranch)
-	return ref, err
+	newRef, _, err := r.gh.Git.CreateRef(ctx, r.Owner, r.Repo, newBranch)
+	return newRef, err
 }
 
-func (r ReadmeRebuilder) generateReadme(ctx context.Context, decisions []*Decision) (string, error) {
+func (r ReadmeRebuilder) generateReadme(decisions []*Decision) (string, error) {
 	t := template.New("README.md")
 	t = template.Must(t.Parse(readmeTemplate))
 
@@ -216,6 +218,12 @@ func (r ReadmeRebuilder) generateReadme(ctx context.Context, decisions []*Decisi
 		Name:        "Architecture",
 		Description: "Our list of decisions",
 	})
+
+	return buf.String(), err
+}
+
+func (r ReadmeRebuilder) regenerateReadme(ctx context.Context, decisions []*Decision) (string, error) {
+	newContent, err := r.generateReadme(decisions)
 	if err != nil {
 		return "", err
 	}
@@ -224,13 +232,12 @@ func (r ReadmeRebuilder) generateReadme(ctx context.Context, decisions []*Decisi
 	if err != nil {
 		return "", err
 	}
-	newContent := buf.String()
 
 	if newContent == content {
 		return "", ErrNoContentChange
 	}
 
-	return newContent, err
+	return newContent, nil
 }
 
 func branchRef(name string, prefix bool) string {
