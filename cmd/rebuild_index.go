@@ -54,6 +54,7 @@ func rebuildIndexAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	builder.DryRun = ctx.Bool("dry-run")
 	builder.CreatePullRequest = ctx.Bool("pull-request")
 	if targetBranch := ctx.String("target-branch"); targetBranch != "" {
 		builder.TargetBranch = targetBranch
