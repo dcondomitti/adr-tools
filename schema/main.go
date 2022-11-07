@@ -1,4 +1,4 @@
-package main
+package schema
 
 import (
 	"fmt"
@@ -11,12 +11,6 @@ type Decision struct {
 	Path       string
 	RawContent string
 	GithubURL  string
-}
-
-type TemplateData struct {
-	Decisions   []*Decision
-	Name        string
-	Description string
 }
 
 var titleMatcher = regexp.MustCompile(`\A# \d+. (.*)`)
