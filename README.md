@@ -48,20 +48,24 @@ GLOBAL OPTIONS:
 
 ## GitHub Actions
 
-### Rebuild README.md directly in main whenever "proposal" label is added or removed from a pull request
+### Rebuild README.md directly in main
 
-If you'd like to rebuild with a randomly created branch and a pull request, remove the `--target-branch` and `--pull-request` arguments from the example.
+This GitHub Action will rebuild the `README.md` file in the main branch of your repository whenever a pull request is
+merged or labeled with `proposal`.
+
+If you'd like to rebuild with a randomly created branch and a pull request, remove the `--target-branch` and
+`--pull-request` arguments from the example.
 
 ```yaml
 name: Rebuild index
 
 on:
   pull_request:
-    types: [ labeled ]
+    types: [ labeled, unlabeled, closed ]
 
 jobs:
   rebuild-index:
-    if: ${{ github.event.label.name == 'proposal' }}
+    if: ${{ github.event.label.name == 'proposal' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     container:
       image: bmorton/adr-tools:latest
