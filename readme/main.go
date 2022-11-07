@@ -26,12 +26,14 @@ type TemplateData struct {
 }
 
 type Builder struct {
-	Path         string
-	Owner        string
-	Repo         string
-	BaseBranch   string
-	TargetBranch string
-	gh           *github.Client
+	Path              string
+	Owner             string
+	Repo              string
+	BaseBranch        string
+	TargetBranch      string
+	CreatePullRequest bool
+	CreateBranch      bool
+	gh                *github.Client
 }
 
 func NewBuilder(gh *github.Client, repository string) (*Builder, error) {
@@ -41,12 +43,14 @@ func NewBuilder(gh *github.Client, repository string) (*Builder, error) {
 	}
 
 	return &Builder{
-		gh:           gh,
-		BaseBranch:   "main",
-		TargetBranch: fmt.Sprintf("adr-tools/readme-update/%d", time.Now().Unix()),
-		Path:         "README.md",
-		Owner:        parts[0],
-		Repo:         parts[1],
+		gh:                gh,
+		BaseBranch:        "main",
+		TargetBranch:      fmt.Sprintf("adr-tools/readme-update/%d", time.Now().Unix()),
+		Path:              "README.md",
+		Owner:             parts[0],
+		Repo:              parts[1],
+		CreatePullRequest: true,
+		CreateBranch:      true,
 	}, nil
 }
 
@@ -70,12 +74,16 @@ func (r Builder) RebuildWithPullRequest(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("-- Creating pull request...\n")
-	create, err := r.createPullRequest(ctx)
-	if err != nil {
-		return err
+	if r.CreatePullRequest {
+		fmt.Printf("-- Creating pull request...\n")
+		create, err := r.createPullRequest(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Success!\n%s\n", create.GetHTMLURL())
+	} else {
+		fmt.Printf("Success! (skipped pull request)\n")
 	}
-	fmt.Printf("Success!\n%s\n", create.GetHTMLURL())
 
 	return nil
 }
@@ -205,7 +213,12 @@ func (r Builder) commitToBranch(ctx context.Context, content string, message str
 			SHA: commit.SHA,
 		},
 	}
-	newRef, _, err := r.gh.Git.CreateRef(ctx, r.Owner, r.Repo, newBranch)
+	var newRef *github.Reference
+	if r.CreateBranch {
+		newRef, _, err = r.gh.Git.CreateRef(ctx, r.Owner, r.Repo, newBranch)
+	} else {
+		newRef, _, err = r.gh.Git.UpdateRef(ctx, r.Owner, r.Repo, newBranch, false)
+	}
 	return newRef, err
 }
 

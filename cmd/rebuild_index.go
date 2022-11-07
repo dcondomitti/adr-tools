@@ -25,22 +25,34 @@ var RebuildIndexCommand = &cli.Command{
 			Required: true,
 			EnvVars:  []string{"GITHUB_REPOSITORY"},
 		},
+		&cli.BoolFlag{
+			Name:  "pull-request",
+			Usage: "Create a pull request",
+			Value: true,
+		},
+		&cli.StringFlag{
+			Name:        "target-branch",
+			Usage:       "Target branch for rebuild commit",
+			DefaultText: "random branch name",
+		},
 	},
 }
 
 func rebuildIndexAction(ctx *cli.Context) error {
-	token := ctx.String("github-token")
-	repository := ctx.String("github-repository")
-
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
+		&oauth2.Token{AccessToken: ctx.String("github-token")},
 	)
 	tc := oauth2.NewClient(context.Background(), ts)
 	client := github.NewClient(tc)
 
-	builder, err := readme.NewBuilder(client, repository)
+	builder, err := readme.NewBuilder(client, ctx.String("github-repository"))
 	if err != nil {
 		return err
+	}
+	builder.CreatePullRequest = ctx.Bool("pull-request")
+	if targetBranch := ctx.String("target-branch"); targetBranch != "" {
+		builder.TargetBranch = targetBranch
+		builder.CreateBranch = false
 	}
 
 	err = builder.RebuildWithPullRequest(context.Background())
