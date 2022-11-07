@@ -33,6 +33,7 @@ type Builder struct {
 	TargetBranch      string
 	CreatePullRequest bool
 	CreateBranch      bool
+	DryRun            bool
 	gh                *github.Client
 }
 
@@ -68,21 +69,25 @@ func (r Builder) RebuildWithPullRequest(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("-- Committing changes...\n")
-	_, err = r.commitToBranch(ctx, newContent, "Refreshed list of decisions", branchRef(r.BaseBranch, false))
-	if err != nil {
-		return err
-	}
-
-	if r.CreatePullRequest {
-		fmt.Printf("-- Creating pull request...\n")
-		create, err := r.createPullRequest(ctx)
+	if r.DryRun {
+		fmt.Println(newContent)
+	} else {
+		fmt.Printf("-- Committing changes...\n")
+		_, err = r.commitToBranch(ctx, newContent, "Refreshed list of decisions", branchRef(r.BaseBranch, false))
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Success!\n%s\n", create.GetHTMLURL())
-	} else {
-		fmt.Printf("Success! (skipped pull request)\n")
+
+		if r.CreatePullRequest {
+			fmt.Printf("-- Creating pull request...\n")
+			create, err := r.createPullRequest(ctx)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Success!\n%s\n", create.GetHTMLURL())
+		} else {
+			fmt.Printf("Success! (skipped pull request)\n")
+		}
 	}
 
 	return nil

@@ -35,6 +35,11 @@ var RebuildIndexCommand = &cli.Command{
 			Usage:       "Target branch for rebuild commit",
 			DefaultText: "random branch name",
 		},
+		&cli.BoolFlag{
+			Name:  "dry-run",
+			Usage: "Render README to stdout instead of committing",
+			Value: false,
+		},
 	},
 }
 
