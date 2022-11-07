@@ -7,6 +7,4 @@ COPY . .
 RUN go build -o adr-tools *.go
 
 FROM alpine:edge
-
-COPY --from=builder ["/build/adr-tools", "/"]
-ENTRYPOINT ["/adr-tools"]
+COPY --from=builder ["/build/adr-tools", "/bin/adr-tools"]
