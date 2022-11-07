@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-github/v48/github"
 	"github.com/namsral/flag"
 	"golang.org/x/oauth2"
+	"strings"
 	"text/template"
 	"time"
 )
@@ -20,7 +21,9 @@ var readmeTemplate string
 
 func main() {
 	var token string
+	var repository string
 	flag.StringVar(&token, "github-token", "", "GitHub token for architecture repo")
+	flag.StringVar(&repository, "repository", "", "GitHub architecture repo as owner/repo")
 	flag.Parse()
 
 	ts := oauth2.StaticTokenSource(
@@ -29,11 +32,14 @@ func main() {
 	tc := oauth2.NewClient(context.Background(), ts)
 	client := github.NewClient(tc)
 
-	builder := NewReadmeRebuilder(client, "bmorton", "architecture-example")
-
-	err := builder.BuildWithPullRequest(context.Background())
+	builder, err := NewReadmeRebuilder(client, repository)
 	if err != nil {
-		fmt.Printf("Failed!\nError: %s\n", err)
+		fmt.Printf("Error: %s\n", err)
+	}
+
+	err = builder.BuildWithPullRequest(context.Background())
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
 	}
 }
 
@@ -76,15 +82,20 @@ func (r ReadmeRebuilder) BuildWithPullRequest(ctx context.Context) error {
 	return nil
 }
 
-func NewReadmeRebuilder(gh *github.Client, owner string, repo string) *ReadmeRebuilder {
+func NewReadmeRebuilder(gh *github.Client, repository string) (*ReadmeRebuilder, error) {
+	parts := strings.Split(repository, "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repository: %s", repository)
+	}
+
 	return &ReadmeRebuilder{
 		gh:           gh,
 		BaseBranch:   "main",
 		TargetBranch: fmt.Sprintf("adr-tools/readme-update/%d", time.Now().Unix()),
 		Path:         "README.md",
-		Owner:        owner,
-		Repo:         repo,
-	}
+		Owner:        parts[0],
+		Repo:         parts[1],
+	}, nil
 }
 
 func (r ReadmeRebuilder) getRef(ctx context.Context, ref string) (*github.Reference, error) {
