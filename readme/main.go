@@ -90,7 +90,7 @@ func (r Builder) loadDecisions(ctx context.Context) (map[string]*schema.Decision
 
 	// Find ADRs in main and in any PR that's labeled with "toc"
 	branches := []string{branchRef(r.BaseBranch, true)}
-	issues, _, err := r.gh.Search.Issues(ctx, fmt.Sprintf("repo:%s/%s is:pull-request is:open label:toc", r.Owner, r.Repo), nil)
+	issues, _, err := r.gh.Search.Issues(ctx, fmt.Sprintf("repo:%s/%s is:pull-request is:open label:proposal", r.Owner, r.Repo), nil)
 	if err != nil {
 		return nil, err
 	}
