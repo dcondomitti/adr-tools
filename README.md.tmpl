@@ -1,0 +1,14 @@
+# {{ .Name }}
+
+{{ .Description }}
+
+## Decisions
+
+| #                    | Title                                                                       | Status   |
+|----------------------|-----------------------------------------------------------------------------|----------|
+{{ range $element := .Decisions -}}
+| [{{ $element.ID }}][{{ $element.ID }}] | {{ $element.Title }} | {{ $element.Status }} |
+{{ end -}}
+
+{{ range $element := .Decisions }}
+[{{ $element.ID }}]: {{ $element.GithubURL }}{{ end }}
