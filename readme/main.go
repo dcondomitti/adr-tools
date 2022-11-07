@@ -21,7 +21,7 @@ var readmeTemplate string
 
 type TemplateData struct {
 	Decisions   []*schema.Decision
-	Name        string
+	Title       string
 	Description string
 }
 
@@ -34,6 +34,8 @@ type Builder struct {
 	CreatePullRequest bool
 	CreateBranch      bool
 	DryRun            bool
+	Title             string
+	Description       string
 	gh                *github.Client
 }
 
@@ -244,8 +246,8 @@ func (r Builder) generateReadme(decisions map[string]*schema.Decision) (string, 
 	buf := bytes.NewBufferString("")
 	err := t.Execute(buf, TemplateData{
 		Decisions:   decisionSlice,
-		Name:        "Architecture",
-		Description: "Our list of decisions",
+		Title:       r.Title,
+		Description: r.Description,
 	})
 
 	return buf.String(), err

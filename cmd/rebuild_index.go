@@ -40,6 +40,16 @@ var RebuildIndexCommand = &cli.Command{
 			Usage: "Render README to stdout instead of committing",
 			Value: false,
 		},
+		&cli.StringFlag{
+			Name:  "readme-title",
+			Usage: "Title for README.md file",
+			Value: "Architecture",
+		},
+		&cli.StringFlag{
+			Name:  "readme-description",
+			Usage: "Description for README.md file",
+			Value: "This is the decision log of architecturally significant decisions.",
+		},
 	},
 }
 
@@ -54,6 +64,8 @@ func rebuildIndexAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	builder.Title = ctx.String("readme-title")
+	builder.Description = ctx.String("readme-description")
 	builder.DryRun = ctx.Bool("dry-run")
 	builder.CreatePullRequest = ctx.Bool("pull-request")
 	if targetBranch := ctx.String("target-branch"); targetBranch != "" {
