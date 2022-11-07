@@ -45,3 +45,11 @@ func (d Decision) Status() string {
 
 	return statuses[1]
 }
+
+func (d Decision) IsActive() bool {
+	if strings.Contains(d.Status(), "Superseded") {
+		return false
+	}
+
+	return true
+}
