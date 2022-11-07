@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-github/v48/github"
 	"github.com/namsral/flag"
 	"golang.org/x/oauth2"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -55,7 +56,7 @@ type ReadmeRebuilder struct {
 func (r ReadmeRebuilder) BuildWithPullRequest(ctx context.Context) error {
 	fmt.Printf("Building for %s/%s...\n", r.Owner, r.Repo)
 	fmt.Printf("-- Loading decisions...\n")
-	decisions, err := r.loadDecisions(ctx, branchRef(r.BaseBranch, true))
+	decisions, err := r.loadDecisions(ctx)
 	if err != nil {
 		return err
 	}
@@ -103,28 +104,47 @@ func (r ReadmeRebuilder) getRef(ctx context.Context, ref string) (*github.Refere
 	return gitRef, err
 }
 
-func (r ReadmeRebuilder) loadDecisions(ctx context.Context, sha string) ([]*Decision, error) {
-	var decisions []*Decision
+func (r ReadmeRebuilder) loadDecisions(ctx context.Context) (map[string]*Decision, error) {
+	decisions := make(map[string]*Decision)
 
-	_, dir, _, err := r.gh.Repositories.GetContents(ctx, r.Owner, r.Repo, "/decisions",
-		&github.RepositoryContentGetOptions{
-			Ref: sha,
-		},
-	)
+	// Find ADRs in main and in any PR that's labeled with "toc"
+	branches := []string{branchRef(r.BaseBranch, true)}
+	issues, _, err := r.gh.Search.Issues(ctx, fmt.Sprintf("repo:%s/%s is:pull-request is:open label:toc", r.Owner, r.Repo), nil)
 	if err != nil {
-		return decisions, err
+		return nil, err
+	}
+	for _, issue := range issues.Issues {
+		pr, _, err := r.gh.PullRequests.Get(ctx, r.Owner, r.Repo, issue.GetNumber())
+		if err != nil {
+			return nil, err
+		}
+		branches = append(branches, pr.GetHead().GetRef())
 	}
 
-	for _, decision := range dir {
-		content, err := r.getContent(ctx, sha, decision.GetPath())
+	for _, branch := range branches {
+		_, dir, _, err := r.gh.Repositories.GetContents(ctx, r.Owner, r.Repo, "/decisions",
+			&github.RepositoryContentGetOptions{
+				Ref: branch,
+			},
+		)
 		if err != nil {
 			return decisions, err
 		}
-		decisions = append(decisions, &Decision{
-			RawContent: content,
-			Path:       decision.GetPath(),
-			GithubURL:  decision.GetHTMLURL(),
-		})
+
+		for _, decisionRef := range dir {
+			content, err := r.getContent(ctx, branch, decisionRef.GetPath())
+			if err != nil {
+				return decisions, err
+			}
+			decision := &Decision{
+				RawContent: content,
+				Path:       decisionRef.GetPath(),
+				GithubURL:  decisionRef.GetHTMLURL(),
+			}
+			if _, ok := decisions[decision.Filename()]; !ok {
+				decisions[decision.Filename()] = decision
+			}
+		}
 	}
 
 	return decisions, nil
@@ -208,13 +228,23 @@ func (r ReadmeRebuilder) commitToBranch(ctx context.Context, content string, mes
 	return newRef, err
 }
 
-func (r ReadmeRebuilder) generateReadme(decisions []*Decision) (string, error) {
+func (r ReadmeRebuilder) generateReadme(decisions map[string]*Decision) (string, error) {
 	t := template.New("README.md")
 	t = template.Must(t.Parse(readmeTemplate))
 
+	var decisionSlice []*Decision
+	keys := make([]string, 0, len(decisions))
+	for k := range decisions {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		decisionSlice = append(decisionSlice, decisions[k])
+	}
+
 	buf := bytes.NewBufferString("")
 	err := t.Execute(buf, TemplateData{
-		Decisions:   decisions,
+		Decisions:   decisionSlice,
 		Name:        "Architecture",
 		Description: "Our list of decisions",
 	})
@@ -222,7 +252,7 @@ func (r ReadmeRebuilder) generateReadme(decisions []*Decision) (string, error) {
 	return buf.String(), err
 }
 
-func (r ReadmeRebuilder) regenerateReadme(ctx context.Context, decisions []*Decision) (string, error) {
+func (r ReadmeRebuilder) regenerateReadme(ctx context.Context, decisions map[string]*Decision) (string, error) {
 	newContent, err := r.generateReadme(decisions)
 	if err != nil {
 		return "", err
