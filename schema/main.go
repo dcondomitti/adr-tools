@@ -5,18 +5,32 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type Decision struct {
+	GithubURL  string
 	Path       string
 	RawContent string
-	GithubURL  string
+	Title      string
+	Number     int
+	Status     State
+	Date       time.Time
 }
+
+type State int
+
+const (
+	proposed State = iota
+	accepted
+	rejected
+	superseded
+)
 
 var titleMatcher = regexp.MustCompile(`\A# \d+. (.*)`)
 var statusMatcher = regexp.MustCompile(`## Status\s*(.*)`)
 
-func (d Decision) Title() string {
+func (d Decision) TitleFromDocument() string {
 	titles := titleMatcher.FindStringSubmatch(d.RawContent)
 	if len(titles) <= 1 {
 		return "Untitled document"
@@ -45,7 +59,7 @@ func (d Decision) ID() string {
 	return fmt.Sprintf("ADR-%s", parts[0])
 }
 
-func (d Decision) Status() string {
+func (d Decision) StatusFromDocument() string {
 	statuses := statusMatcher.FindStringSubmatch(d.RawContent)
 	if len(statuses) <= 1 {
 		return "Unknown"
@@ -55,7 +69,7 @@ func (d Decision) Status() string {
 }
 
 func (d Decision) IsActive() bool {
-	if strings.Contains(d.Status(), "Superseded") {
+	if strings.Contains(d.StatusFromDocument(), "Superseded") {
 		return false
 	}
 
